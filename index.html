@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>简易 PS 风格图片编辑器</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background: radial-gradient(circle at top left, #3b3f52 0, #18191f 55%, #101117 100%);
+      color: #f5f5f5;
+    }
+
+    /* 顶部条 */
+    header {
+      padding: 16px 24px;
+      background: linear-gradient(90deg, #272a33, #20222b);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid #3b3e48;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+      z-index: 2;
+    }
+    .app-title {
+      width: 520px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #e8eaed;
+    }
+    .header-center {
+      display: none;
+    }
+    .file-btn {
+      position: relative;
+      overflow: hidden;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid #4c505b;
+      background: radial-gradient(circle at top left, #3b3f4a, #252830);
+      color: #e8eaed;
+      font-size: 11px;
+      cursor: pointer;
+      gap: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    .file-btn.file-full {
+      width: 100%;
+      justify-content: flex-start;
+      padding: 10px 14px;
+      font-size: 13px;
+      border-radius: 10px;
+    }
+    .file-btn span.icon {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    .file-btn input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    #exportBtn {
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 1px solid #1a73e8;
+      background: linear-gradient(135deg, #1a73e8, #4285f4);
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 2px 6px rgba(26,115,232,0.7);
+      white-space: nowrap;
+    }
+    #exportBtn:hover {
+      filter: brightness(1.05);
+    }
+
+    #status {
+      margin-left: auto;
+      font-size: 11px;
+      opacity: 0.85;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(120,120,120,0.4);
+      color: #cfd3da;
+      max-width: 240px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* 左侧工具栏 */
+    #sidepanel {
+      width: 520px;
+      min-width: 520px;
+      background: linear-gradient(180deg, #242631, #181a21);
+      border-right: 1px solid #343744;
+      padding: 20px;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.4);
+    }
+    .tool-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(89,96,122,0.7);
+      background: radial-gradient(circle at top left, rgba(65,71,96,0.9), rgba(27,29,40,0.9));
+      box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+    }
+    .tool-group-title {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #9aa0a6;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(94,99,117,0.7);
+    }
+    .tool-group button {
+      width: 100%;
+      padding: 5px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(120,124,139,0.8);
+      background: linear-gradient(180deg, #323543, #262833);
+      color: #e8eaed;
+      cursor: pointer;
+      font-size: 11px;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+    .tool-group button span.key-hint {
+      font-size: 10px;
+      opacity: 0.75;
+    }
+    .tool-group button:hover {
+      background: linear-gradient(180deg, #3a3e4e, #282b37);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    }
+    .tool-group button.active {
+      border-color: #8ab4f8;
+      background: radial-gradient(circle at top left, #3c5a99, #283857);
+      box-shadow: 0 0 0 1px rgba(44,118,255,0.7), 0 4px 10px rgba(0,0,0,0.7);
+    }
+
+    /* 画布区域 */
+    #canvasContainer {
+      flex: 1;
+      position: relative;
+      background: radial-gradient(circle at center, #252733 0, #111219 55%, #05060b 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 10px 12px;
+    }
+
+    #editorCanvas {
+      background: #111;
+      border-radius: 10px;
+      border: 1px solid rgba(100,110,140,0.8);
+      max-width: 100%;
+      max-height: 100%;
+      cursor: default;
+      box-shadow: 0 8px 26px rgba(0,0,0,0.7);
+    }
+
+    #overlayInfo {
+      position: absolute;
+      bottom: 10px;
+      left: 12px;
+      background: rgba(0,0,0,0.65);
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid rgba(120,120,120,0.6);
+      color: #e8eaed;
+      backdrop-filter: blur(4px);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="app-title">快速PS场景图</div>
+    <div id="status">状态：就绪</div>
+  </header>
+
+  <main>
+    <aside id="sidepanel">
+      <div class="tool-group">
+        <div class="tool-group-title">文件</div>
+        <label class="file-btn file-full">
+          <span class="icon">🖼</span>
+          <span>加载底图</span>
+          <input type="file" id="bgLoader" accept="image/*" />
+        </label>
+        <label class="file-btn file-full">
+          <span class="icon">📎</span>
+          <span>加载素材</span>
+          <input type="file" id="fgLoader" accept="image/*" />
+        </label>
+        <button id="exportBtn">导出 PNG</button>
+      </div>
+      <div class="tool-group">
+        <div class="tool-group-title">操作工具</div>
+        <button id="moveToolBtn" class="active">移动工具 <span class="key-hint">V</span></button>
+        <button id="transformToolBtn">变形工具 <span class="key-hint">T</span></button>
+        <button id="scaleUpBtn">等比放大 <span class="key-hint">Ctrl + =</span></button>
+        <button id="scaleDownBtn">等比缩小 <span class="key-hint">Ctrl + -</span></button>
+      </div>
+
+      <div class="tool-group">
+        <div class="tool-group-title">抠图工具</div>
+        <button id="rectToolBtn">矩形抠图 <span class="key-hint">R</span></button>
+        <button id="penToolBtn">钢笔抠图 <span class="key-hint">P</span></button>
+        <button id="applyMaskBtn">应用抠图</button>
+        <button id="clearMaskBtn">清除抠图</button>
+      </div>
+
+      <div class="tool-group">
+        <div class="tool-group-title">操作历史</div>
+        <button id="undoBtn">撤回 <span class="key-hint">Ctrl + Z</span></button>
+        <button id="redoBtn">恢复撤回 <span class="key-hint">Ctrl + Shift + Z</span></button>
+        <button id="resetOpBtn">重置操作</button>
+      </div>
+    </aside>
+
+    <section id="canvasContainer">
+      <canvas id="editorCanvas" width="1200" height="800"></canvas>
+      <div id="overlayInfo">缩放: 100% | 素材缩放: 100%</div>
+    </section>
+  </main>
+
+  <script>
+    const bgLoader = document.getElementById('bgLoader');
+    const fgLoader = document.getElementById('fgLoader');
+    const canvas = document.getElementById('editorCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const moveToolBtn = document.getElementById('moveToolBtn');
+    const transformToolBtn = document.getElementById('transformToolBtn');
+    const scaleUpBtn = document.getElementById('scaleUpBtn');
+    const scaleDownBtn = document.getElementById('scaleDownBtn');
+    const penToolBtn = document.getElementById('penToolBtn');
+    const rectToolBtn = document.getElementById('rectToolBtn');
+    const applyMaskBtn = document.getElementById('applyMaskBtn');
+    const clearMaskBtn = document.getElementById('clearMaskBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    const resetOpBtn = document.getElementById('resetOpBtn');
+
+    const statusSpan = document.getElementById('status');
+    const overlayInfo = document.getElementById('overlayInfo');
+
+    let bgImg = null;   // 底图 Image
+    let fgImg = null;   // 素材 Image（可能是原始图，也可能是抠图后裁切的新图层）
+
+    // 视图缩放与平移（类似 PS 里的整体缩放和抓手工具）
+    let viewScale = 1.0;
+    let viewOffsetX = canvas.width / 2;
+    let viewOffsetY = canvas.height / 2;
+
+    // 素材平移/缩放（非透视时使用） —— 世界坐标
+    let fgScale = 1.0;
+    let fgPosX = 0; // 左上角世界坐标
+    let fgPosY = 0;
+
+    // 素材的四角（世界坐标），顺序：TL, TR, BR, BL
+    let fgQuad = null;
+    let hasPerspective = false; // 是否已经进行了透视自由变形
+
+    // 钢笔 / 矩形抠图路径：存在素材局部坐标（原始像素）中
+    let maskPoints = []; // [{x,y},...]
+
+    // 矩形绘制临时状态
+    let isRectDrawing = false;
+    let rectStartLocal = null;
+    let rectCurrentLocal = null;
+
+    // 工具模式："move" | "transform" | "pen" | "rect"
+    let toolMode = 'move';
+
+    // 鼠标拖拽状态
+    let isLeftDragging = false;
+    let isRightDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    // 移动素材（非透视）记录起始位置
+    let dragStartFgPosX = 0;
+    let dragStartFgPosY = 0;
+
+    // 视图平移起始偏移
+    let dragStartViewOffsetX = 0;
+    let dragStartViewOffsetY = 0;
+
+    // 钢笔移动点
+    let draggingPointIndex = -1;
+
+    // 变换工具：拖动角点
+    let draggingCornerIndex = -1; // 0-3
+    let dragStartQuad = null; // 拖动开始时的四角备份
+
+    // 历史记录（仅针对前景素材与抠图等操作）
+    let history = [];
+    let historyIndex = -1;
+    let initialFgState = null; // 刚加载素材后的初始状态
+
+    function setStatus(msg) {
+      statusSpan.textContent = '状态：' + msg;
+    }
+
+    // ========= 坐标换算 =========
+    function worldToScreen(x, y) {
+      return {
+        x: x * viewScale + viewOffsetX,
+        y: y * viewScale + viewOffsetY
+      };
+    }
+
+    function screenToWorld(sx, sy) {
+      return {
+        x: (sx - viewOffsetX) / viewScale,
+        y: (sy - viewOffsetY) / viewScale
+      };
+    }
+
+    // 根据轴对齐矩形更新四角（非透视时使用）
+    function updateFgQuadFromRect() {
+      if (!fgImg) return;
+      const w = fgImg.width * fgScale;
+      const h = fgImg.height * fgScale;
+      fgQuad = [
+        { x: fgPosX,     y: fgPosY },      // TL
+        { x: fgPosX + w, y: fgPosY },      // TR
+        { x: fgPosX + w, y: fgPosY + h },  // BR
+        { x: fgPosX,     y: fgPosY + h }   // BL
+      ];
+    }
+
+    function pointInTriangle(px, py, ax, ay, bx, by, cx, cy) {
+      const v0x = cx - ax;
+      const v0y = cy - ay;
+      const v1x = bx - ax;
+      const v1y = by -ay;
+      const v2x = px - ax;
+      const v2y = py - ay;
+
+      const dot00 = v0x * v0x + v0y * v0y;
+      const dot01 = v0x * v1x + v0y * v1y;
+      const dot02 = v0x * v2x + v0y * v2y;
+      const dot11 = v1x * v1x + v1y * v1y;
+      const dot12 = v1x * v2x + v1y * v2y;
+
+      const invDenom = 1 / (dot00 * dot11 - dot01 * dot01);
+      const u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+      const v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+      return (u >= 0) && (v >= 0) && (u + v <= 1);
+    }
+
+    function isPointInQuadScreen(sx, sy, quadScreen) {
+      const p0 = quadScreen[0];
+      const p1 = quadScreen[1];
+      const p2 = quadScreen[2];
+      const p3 = quadScreen[3];
+      return (
+        pointInTriangle(sx, sy, p0.x, p0.y, p1.x, p1.y, p2.x, p2.y) ||
+        pointInTriangle(sx, sy, p0.x, p0.y, p2.x, p2.y, p3.x, p3.y)
+      );
+    }
+
+    function isPointOnFgScreen(sx, sy) {
+      if (!fgImg || !fgQuad) return false;
+      const quadScreen = fgQuad.map(p => worldToScreen(p.x, p.y));
+      return isPointInQuadScreen(sx, sy, quadScreen);
+    }
+
+    function hitQuadCorner(sx, sy, quadScreen, radius = 10) {
+      for (let i = 0; i < 4; i++) {
+        const p = quadScreen[i];
+        const dx = sx - p.x;
+        const dy = sy - p.y;
+        if (dx * dx + dy * dy <= radius * radius) return i;
+      }
+      return -1;
+    }
+
+    // ========= 钢笔/矩形辅助 =========
+    function worldToFgLocal(x, y) {
+      return {
+        x: (x - fgPosX) / fgScale,
+        y: (y - fgPosY) / fgScale
+      };
+    }
+
+    function hitMaskPointForPen(sx, sy, thresholdPx = 10) {
+      if (!fgImg || maskPoints.length === 0) return -1;
+      for (let i = 0; i < maskPoints.length; i++) {
+        const p = maskPoints[i];
+        const worldX = fgPosX + p.x * fgScale;
+        const worldY = fgPosY + p.y * fgScale;
+        const s = worldToScreen(worldX, worldY);
+        const dx = s.x - sx;
+        const dy = s.y - sy;
+        if (dx * dx + dy * dy <= thresholdPx * thresholdPx) return i;
+      }
+      return -1;
+    }
+
+    function snapToAxis(base, target) {
+      const dx = target.x - base.x;
+      const dy = target.y - base.y;
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        return { x: target.x, y: base.y }; // 水平
+      } else {
+        return { x: base.x, y: target.y }; // 垂直
+      }
+    }
+
+    // ========= 透视绘制 =========
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function lerpPoint(p0, p1, t) {
+      return { x: lerp(p0.x, p1.x, t), y: lerp(p0.y, p1.y, t) };
+    }
+
+    function drawWarpedImageScreen(ctx2d, srcImg, quadScreen, steps) {
+      if (!srcImg) return;
+      const [p0, p1, p2, p3] = quadScreen;
+      const imgW = srcImg.width;
+      const imgH = srcImg.height;
+      const autoStepsY = Math.min(2000, Math.max(800, Math.floor(imgH * 4)));
+      const autoStepsX = Math.min(2000, Math.max(800, Math.floor(imgW * 4)));
+      const stepsY = steps ? Math.max(steps, autoStepsY) : autoStepsY;
+      const stepsX = steps ? Math.max(steps, autoStepsX) : autoStepsX;
+
+      ctx2d.save();
+      ctx2d.imageSmoothingEnabled = true;
+      ctx2d.globalAlpha = 1;
+
+      // 水平条带
+      for (let i = 0; i < stepsY; i++) {
+        const t0 = i / stepsY;
+        const t1 = (i + 1) / stepsY;
+        const sy = t0 * imgH;
+        const sh = (t1 - t0) * imgH;
+        if (sh <= 0) continue;
+
+        const lt = lerpPoint(p0, p3, t0);
+        const rt = lerpPoint(p1, p2, t0);
+        const lb = lerpPoint(p0, p3, t1);
+        const rb = lerpPoint(p1, p2, t1);
+
+        const w = imgW;
+
+        const a = (rt.x - lt.x) / w;
+        const b = (rt.y - lt.y) / w;
+        const c = (lb.x - lt.x) / sh;
+        const d = (lb.y - lt.y) / sh;
+        const e = lt.x;
+        const f = lt.y;
+
+        ctx2d.save();
+        ctx2d.setTransform(a, b, c, d, e, f);
+        ctx2d.beginPath();
+        ctx2d.moveTo(0, 0);
+        ctx2d.lineTo(w, 0);
+        ctx2d.lineTo(w, sh);
+        ctx2d.lineTo(0, sh);
+        ctx2d.closePath();
+        ctx2d.clip();
+        ctx2d.drawImage(srcImg, 0, sy, w, sh, 0, 0, w, sh);
+        ctx2d.restore();
+      }
+
+      // 垂直条带
+      for (let j = 0; j < stepsX; j++) {
+        const s0 = j / stepsX;
+        const s1 = (j + 1) / stepsX;
+        const sx = s0 * imgW;
+        const sw = (s1 - s0) * imgW;
+        if (sw <= 0) continue;
+
+        const tl = lerpPoint(p0, p1, s0);
+        const tr = lerpPoint(p0, p1, s1);
+        const bl = lerpPoint(p3, p2, s0);
+        const br = lerpPoint(p3, p2, s1);
+
+        const h = imgH;
+
+        const a2 = (tr.x - tl.x) / sw;
+        const b2 = (tr.y - tl.y) / sw;
+        const c2 = (bl.x - tl.x) / h;
+        const d2 = (bl.y - tl.y) / h;
+        const e2 = tl.x;
+        const f2 = tl.y;
+
+        ctx2d.save();
+        ctx2d.setTransform(a2, b2, c2, d2, e2, f2);
+        ctx2d.beginPath();
+        ctx2d.moveTo(0, 0);
+        ctx2d.lineTo(sw, 0);
+        ctx2d.lineTo(sw, h);
+        ctx2d.lineTo(0, h);
+        ctx2d.closePath();
+        ctx2d.clip();
+        ctx2d.drawImage(srcImg, sx, 0, sw, h, 0, 0, sw, h);
+        ctx2d.restore();
+      }
+
+      ctx2d.restore();
+    }
+
+    function drawQuadOverlay(ctx2d, quadScreen, showHandles) {
+      ctx2d.save();
+      ctx2d.beginPath();
+      ctx2d.moveTo(quadScreen[0].x, quadScreen[0].y);
+      for (let i = 1; i < 4; i++) ctx2d.lineTo(quadScreen[i].x, quadScreen[i].y);
+      ctx2d.closePath();
+      ctx2d.setLineDash([6, 4]);
+      ctx2d.lineWidth = 1;
+      ctx2d.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx2d.stroke();
+      ctx2d.setLineDash([]);
+
+      if (showHandles) {
+        for (let i = 0; i < 4; i++) {
+          const p = quadScreen[i];
+          ctx2d.beginPath();
+          ctx2d.arc(p.x, p.y, 6, 0, Math.PI * 2);
+          ctx2d.fillStyle = '#1a73e8';
+          ctx2d.fill();
+          ctx2d.strokeStyle = '#000';
+          ctx2d.lineWidth = 1;
+          ctx2d.stroke();
+        }
+      }
+      ctx2d.restore();
+    }
+
+    // ========= 透视结果烘焙为新的图层 =========
+    function bakePerspectiveToAxisAligned() {
+      if (!fgImg || !fgQuad || !hasPerspective) return;
+
+      // 计算当前四个角点在世界坐标中的外接矩形
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const p of fgQuad) {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      }
+
+      const width = Math.max(1, Math.ceil(maxX - minX));
+      const height = Math.max(1, Math.ceil(maxY - minY));
+
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = width;
+      offCanvas.height = height;
+      const offCtx = offCanvas.getContext('2d');
+
+      // 将当前四边形转换到新画布的局部坐标系中
+      const localQuad = fgQuad.map(p => ({
+        x: p.x - minX,
+        y: p.y - minY
+      }));
+
+      // 把带透视的素材绘制到新的轴对齐画布中
+      drawWarpedImageScreen(offCtx, fgImg, localQuad, 0);
+
+      // 用新画布替换当前素材图层
+      fgImg = offCanvas;
+      fgPosX = minX;
+      fgPosY = minY;
+      fgScale = 1.0;
+      hasPerspective = false;
+      updateFgQuadFromRect();
+    }
+
+    // ========= 历史记录 =========
+    function clonePoints(arr) {
+      if (!arr) return [];
+      return arr.map(p => p ? { x: p.x, y: p.y } : null);
+    }
+
+    function getStateSnapshot() {
+      if (!fgImg) return null;
+      return {
+        fgImg: fgImg,
+        fgPosX: fgPosX,
+        fgPosY: fgPosY,
+        fgScale: fgScale,
+        fgQuad: fgQuad ? clonePoints(fgQuad) : null,
+        hasPerspective: hasPerspective,
+        maskPoints: clonePoints(maskPoints),
+        isRectDrawing: isRectDrawing,
+        rectStartLocal: rectStartLocal ? { x: rectStartLocal.x, y: rectStartLocal.y } : null,
+        rectCurrentLocal: rectCurrentLocal ? { x: rectCurrentLocal.x, y: rectCurrentLocal.y } : null
+      };
+    }
+
+    function cloneState(state) {
+      if (!state) return null;
+      return {
+        fgImg: state.fgImg,
+        fgPosX: state.fgPosX,
+        fgPosY: state.fgPosY,
+        fgScale: state.fgScale,
+        fgQuad: state.fgQuad ? clonePoints(state.fgQuad) : null,
+        hasPerspective: state.hasPerspective,
+        maskPoints: clonePoints(state.maskPoints),
+        isRectDrawing: state.isRectDrawing,
+        rectStartLocal: state.rectStartLocal ? { x: state.rectStartLocal.x, y: state.rectStartLocal.y } : null,
+        rectCurrentLocal: state.rectCurrentLocal ? { x: state.rectCurrentLocal.x, y: state.rectCurrentLocal.y } : null
+      };
+    }
+
+    function restoreState(state) {
+      if (!state) return;
+      fgImg = state.fgImg;
+      fgPosX = state.fgPosX;
+      fgPosY = state.fgPosY;
+      fgScale = state.fgScale;
+      fgQuad = state.fgQuad ? clonePoints(state.fgQuad) : null;
+      hasPerspective = state.hasPerspective;
+      maskPoints = state.maskPoints ? clonePoints(state.maskPoints) : [];
+      isRectDrawing = state.isRectDrawing;
+      rectStartLocal = state.rectStartLocal ? { x: state.rectStartLocal.x, y: state.rectStartLocal.y } : null;
+      rectCurrentLocal = state.rectCurrentLocal ? { x: state.rectCurrentLocal.x, y: state.rectCurrentLocal.y } : null;
+      draw();
+    }
+
+    function pushHistory() {
+      if (!fgImg) return;
+      const snap = getStateSnapshot();
+      if (!snap) return;
+      const snapCopy = cloneState(snap);
+      history = history.slice(0, historyIndex + 1);
+      history.push(snapCopy);
+      historyIndex = history.length - 1;
+    }
+
+    function undo() {
+      if (historyIndex <= 0) {
+        setStatus('没有更多可撤回的操作');
+        return;
+      }
+      historyIndex--;
+      restoreState(history[historyIndex]);
+      setStatus('已撤回一步操作');
+    }
+
+    function redo() {
+      if (historyIndex < 0 || historyIndex >= history.length - 1) {
+        setStatus('没有更多可恢复的操作');
+        return;
+      }
+      historyIndex++;
+      restoreState(history[historyIndex]);
+      setStatus('已恢复一步操作');
+    }
+
+    function resetOperation() {
+      if (!initialFgState) {
+        setStatus('当前没有可重置的操作');
+        return;
+      }
+      const base = cloneState(initialFgState);
+      restoreState(base);
+      history = [cloneState(base)];
+      historyIndex = 0;
+      setStatus('已重置到刚加载素材时的状态');
+    }
+
+    undoBtn.addEventListener('click', undo);
+    redoBtn.addEventListener('click', redo);
+    resetOpBtn.addEventListener('click', resetOperation);
+
+    // ========= 绘制主循环 =========
+    function draw() {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 画底图
+      if (bgImg) {
+        ctx.save();
+        ctx.setTransform(viewScale, 0, 0, viewScale, viewOffsetX, viewOffsetY);
+        const bgX = -bgImg.width / 2;
+        const bgY = -bgImg.height / 2;
+        ctx.drawImage(bgImg, bgX, bgY);
+        ctx.restore();
+      }
+
+      // 画前景素材
+      if (fgImg && fgQuad) {
+        if (hasPerspective) {
+          const quadScreen = fgQuad.map(p => worldToScreen(p.x, p.y));
+          drawWarpedImageScreen(ctx, fgImg, quadScreen, 0);
+          drawQuadOverlay(ctx, quadScreen, toolMode === 'transform');
+        } else {
+          ctx.save();
+          ctx.setTransform(viewScale, 0, 0, viewScale, viewOffsetX, viewOffsetY);
+
+          ctx.translate(fgPosX, fgPosY);
+          ctx.scale(fgScale, fgScale);
+          ctx.drawImage(fgImg, 0, 0);
+
+          // 路径可视化（钢笔/矩形）
+          if ((toolMode === 'pen' || toolMode === 'rect') && maskPoints.length > 0) {
+            ctx.beginPath();
+            ctx.moveTo(maskPoints[0].x, maskPoints[0].y);
+            for (let i = 1; i < maskPoints.length; i++) ctx.lineTo(maskPoints[i].x, maskPoints[i].y);
+            ctx.closePath();
+            ctx.lineWidth = 1 / fgScale;
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.9)';
+            ctx.setLineDash([4 / fgScale, 4 / fgScale]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            for (let i = 0; i < maskPoints.length; i++) {
+              const p = maskPoints[i];
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, 4 / fgScale, 0, Math.PI * 2);
+              ctx.fillStyle = i === draggingPointIndex ? '#ff9800' : '#00ffff';
+              ctx.fill();
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = 1 / fgScale;
+              ctx.stroke();
+            }
+          }
+
+          // 矩形实时预览
+          if (toolMode === 'rect' && isRectDrawing && rectStartLocal && rectCurrentLocal) {
+            const x1 = rectStartLocal.x;
+            const y1 = rectStartLocal.y;
+            const x2 = rectCurrentLocal.x;
+            const y2 = rectCurrentLocal.y;
+            const minX = Math.min(x1, x2);
+            const maxX = Math.max(x1, x2);
+            const minY = Math.min(y1, y2);
+            const maxY = Math.max(y1, y2);
+            ctx.beginPath();
+            ctx.rect(minX, minY, maxX - minX, maxY - minY);
+            ctx.lineWidth = 1 / fgScale;
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.9)';
+            ctx.setLineDash([4 / fgScale, 4 / fgScale]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+
+          ctx.restore();
+
+          // 外接矩形（类 Ctrl+T 边框）
+          ctx.save();
+          ctx.setTransform(viewScale, 0, 0, viewScale, viewOffsetX, viewOffsetY);
+          ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+          ctx.lineWidth = 1 / viewScale;
+          ctx.setLineDash([6 / viewScale, 4 / viewScale]);
+          ctx.strokeRect(fgPosX, fgPosY, fgImg.width * fgScale, fgImg.height * fgScale);
+          ctx.restore();
+        }
+      }
+
+      overlayInfo.textContent = `缩放: ${(viewScale * 100).toFixed(0)}% | 素材缩放: ${(fgScale * 100).toFixed(0)}%`;
+    }
+
+    function fitViewToBg() {
+      if (!bgImg) return;
+      const margin = 40;
+      const scaleX = (canvas.width - margin * 2) / bgImg.width;
+      const scaleY = (canvas.height - margin * 2) / bgImg.height;
+      viewScale = Math.min(scaleX, scaleY);
+      viewOffsetX = canvas.width / 2;
+      viewOffsetY = canvas.height / 2;
+    }
+
+    // ========= 图片加载 =========
+    bgLoader.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        // 如果任意一条边大于 3000 像素，则直接按原始分辨率加载，避免放大到 300DPI 导致卡顿
+        if (img.width > 3000 || img.height > 3000) {
+          bgImg = img;
+          fitViewToBg();
+          setStatus('底图尺寸较大，保持原始分辨率加载');
+          draw();
+          return;
+        }
+
+        // 否则，将底图默认提升至 300 DPI 等效像素（假设原始为 72DPI）
+        const dpiScale = 300 / 72;
+        const upW = Math.round(img.width * dpiScale);
+        const upH = Math.round(img.height * dpiScale);
+
+        const upCanvas = document.createElement('canvas');
+        upCanvas.width = upW;
+        upCanvas.height = upH;
+        const upCtx = upCanvas.getContext('2d');
+        upCtx.imageSmoothingEnabled = true;
+        upCtx.drawImage(img, 0, 0, upW, upH);
+
+        bgImg = new Image();
+        bgImg.onload = () => {
+          fitViewToBg();
+          setStatus('底图已自动提升至 300 DPI 分辨率');
+          draw();
+        };
+        bgImg.src = upCanvas.toDataURL();
+      };
+      img.src = URL.createObjectURL(file);
+    });
+
+    fgLoader.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        fgImg = img;
+        fgScale = 1.0;
+        hasPerspective = false;
+        maskPoints = [];
+        isRectDrawing = false;
+        rectStartLocal = rectCurrentLocal = null;
+
+        if (bgImg) {
+          fgPosX = -img.width / 2 + bgImg.width / 4;
+          fgPosY = -img.height / 2;
+        } else {
+          fgPosX = -img.width / 2;
+          fgPosY = -img.height / 2;
+        }
+        updateFgQuadFromRect();
+        setStatus('素材加载完成');
+        draw();
+
+        // 初始化历史记录和初始状态
+        const snap = getStateSnapshot();
+        initialFgState = snap ? cloneState(snap) : null;
+        history = snap ? [cloneState(snap)] : [];
+        historyIndex = snap ? 0 : -1;
+      };
+      img.src = URL.createObjectURL(file);
+    });
+
+    // ========= 工具按钮 =========
+    function setToolMode(mode) {
+      // 如果当前素材已经做过透视变形，并且准备再抠图，则先把透视效果烘焙成新的图层
+      if ((mode === 'pen' || mode === 'rect') && hasPerspective && fgImg && fgQuad) {
+        bakePerspectiveToAxisAligned();
+        pushHistory();
+        setStatus('已将当前透视变形烘焙为新的图层，抠图将在现有基础上进行');
+      }
+
+      toolMode = mode;
+      moveToolBtn.classList.remove('active');
+      transformToolBtn.classList.remove('active');
+      penToolBtn.classList.remove('active');
+      rectToolBtn.classList.remove('active');
+
+      if (mode === 'move') {
+        moveToolBtn.classList.add('active');
+        setStatus('移动工具 (V)：拖动素材平移，Ctrl+=/- 或按钮 等比缩放');
+      } else if (mode === 'transform') {
+        transformToolBtn.classList.add('active');
+        setStatus('透视变换：拖动四个角点进行透视自由变形');
+      } else if (mode === 'pen') {
+        penToolBtn.classList.add('active');
+        setStatus('钢笔抠图 (P)：点击添加/拖动锚点，Shift 约束为水平/垂直，完成后点击“应用抠图”');
+      } else if (mode === 'rect') {
+        rectToolBtn.classList.add('active');
+        setStatus('矩形抠图 (R)：按下左键拖出矩形，松开后再点击“应用抠图”');
+      }
+
+      draggingPointIndex = -1;
+      draggingCornerIndex = -1;
+      draw();
+    }
+
+    moveToolBtn.addEventListener('click', () => setToolMode('move'));
+    transformToolBtn.addEventListener('click', () => setToolMode('transform'));
+    penToolBtn.addEventListener('click', () => setToolMode('pen'));
+    rectToolBtn.addEventListener('click', () => setToolMode('rect'));
+
+    clearMaskBtn.addEventListener('click', () => {
+      maskPoints = [];
+      isRectDrawing = false;
+      rectStartLocal = rectCurrentLocal = null;
+      draggingPointIndex = -1;
+      setStatus('已清除当前抠图路径');
+      pushHistory();
+      draw();
+    });
+
+    applyMaskBtn.addEventListener('click', () => {
+      if (!fgImg) {
+        alert('请先加载素材');
+        return;
+      }
+      if (maskPoints.length < 3) {
+        alert('请先用钢笔/矩形画出一个封闭路径');
+        return;
+      }
+
+      // 计算路径外接矩形
+      let minX = fgImg.width;
+      let maxX = 0;
+      let minY = fgImg.height;
+      let maxY = 0;
+      for (const p of maskPoints) {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      }
+      minX = Math.max(0, Math.floor(minX));
+      minY = Math.max(0, Math.floor(minY));
+      maxX = Math.min(fgImg.width, Math.ceil(maxX));
+      maxY = Math.min(fgImg.height, Math.ceil(maxY));
+      const cropW = maxX - minX;
+      const cropH = maxY - minY;
+      if (cropW <= 0 || cropH <= 0) {
+        alert('抠图范围无效，请检查路径');
+        return;
+      }
+
+      // 在新 canvas 中按路径裁切出这一块
+      const cropCanvas = document.createElement('canvas');
+      cropCanvas.width = cropW;
+      cropCanvas.height = cropH;
+      const cropCtx = cropCanvas.getContext('2d');
+      cropCtx.clearRect(0, 0, cropW, cropH);
+
+      cropCtx.save();
+      cropCtx.beginPath();
+      cropCtx.moveTo(maskPoints[0].x - minX, maskPoints[0].y - minY);
+      for (let i = 1; i < maskPoints.length; i++) {
+        cropCtx.lineTo(maskPoints[i].x - minX, maskPoints[i].y - minY);
+      }
+      cropCtx.closePath();
+      cropCtx.clip();
+      cropCtx.drawImage(fgImg, -minX, -minY);
+      cropCtx.restore();
+
+      // 世界坐标中，对应左上角的位置
+      const newPosX = fgPosX + minX * fgScale;
+      const newPosY = fgPosY + minY * fgScale;
+
+      fgImg = cropCanvas;
+      fgPosX = newPosX;
+      fgPosY = newPosY;
+      hasPerspective = false;
+      maskPoints = [];
+      isRectDrawing = false;
+      rectStartLocal = rectCurrentLocal = null;
+      updateFgQuadFromRect();
+
+      setStatus('已根据路径裁切生成新的素材图层，后续变换都作用在这块图层上');
+      pushHistory();
+      draw();
+    });
+
+    // ========= 等比缩放 =========
+    function uniformScale(factor) {
+      if (!fgImg) return;
+      if (hasPerspective && fgQuad) {
+        const cx = (fgQuad[0].x + fgQuad[2].x) / 2;
+        const cy = (fgQuad[0].y + fgQuad[2].y) / 2;
+        for (let i = 0; i < 4; i++) {
+          fgQuad[i].x = cx + (fgQuad[i].x - cx) * factor;
+          fgQuad[i].y = cy + (fgQuad[i].y - cy) * factor;
+        }
+      } else {
+        fgScale *= factor;
+        fgScale = Math.min(Math.max(fgScale, 0.05), 20);
+        updateFgQuadFromRect();
+      }
+      setStatus(factor > 1 ? '素材等比放大' : '素材等比缩小');
+      pushHistory();
+      draw();
+    }
+
+    scaleUpBtn.addEventListener('click', () => uniformScale(1.1));
+    scaleDownBtn.addEventListener('click', () => uniformScale(0.9));
+
+    // ========= 鼠标事件 =========
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+
+      if (e.button === 0) {
+        isLeftDragging = true;
+        dragStartX = sx;
+        dragStartY = sy;
+
+        if (!fgImg) return;
+        const quadScreen = fgQuad ? fgQuad.map(p => worldToScreen(p.x, p.y)) : null;
+
+        if (toolMode === 'move') {
+          if (quadScreen && isPointInQuadScreen(sx, sy, quadScreen)) {
+            if (hasPerspective) {
+              dragStartQuad = fgQuad.map(p => ({ x: p.x, y: p.y }));
+            } else {
+              dragStartFgPosX = fgPosX;
+              dragStartFgPosY = fgPosY;
+            }
+            setStatus('拖动素材中...');
+          }
+        } else if (toolMode === 'pen') {
+          const hitIndex = hitMaskPointForPen(sx, sy);
+          if (hitIndex >= 0) {
+            draggingPointIndex = hitIndex;
+            setStatus('拖动锚点中...');
+          } else if (isPointOnFgScreen(sx, sy)) {
+            const world = screenToWorld(sx, sy);
+            let local = worldToFgLocal(world.x, world.y);
+            if (maskPoints.length > 0 && e.shiftKey) {
+              // Shift：相对上一个点约束为水平/垂直
+              const base = maskPoints[maskPoints.length - 1];
+              local = snapToAxis(base, local);
+            }
+            maskPoints.push(local);
+            draggingPointIndex = maskPoints.length - 1;
+            setStatus('添加锚点');
+            draw();
+          }
+        } else if (toolMode === 'rect') {
+          if (isPointOnFgScreen(sx, sy)) {
+            const world = screenToWorld(sx, sy);
+            const local = worldToFgLocal(world.x, world.y);
+            isRectDrawing = true;
+            rectStartLocal = { ...local };
+            rectCurrentLocal = { ...local };
+            maskPoints = []; // 重新开始一块矩形
+            setStatus('拖动以绘制矩形路径');
+            draw();
+          }
+        } else if (toolMode === 'transform') {
+          if (!fgQuad || !quadScreen) return;
+          const corner = hitQuadCorner(sx, sy, quadScreen, 10);
+          dragStartQuad = fgQuad.map(p => ({ x: p.x, y: p.y }));
+          if (corner >= 0) {
+            draggingCornerIndex = corner;
+            setStatus('拖动变换角点中...');
+          } else if (isPointInQuadScreen(sx, sy, quadScreen)) {
+            draggingCornerIndex = -1;
+            setStatus('拖动素材中...');
+          }
+        }
+      } else if (e.button === 2) {
+        isRightDragging = true;
+        dragStartX = sx;
+        dragStartY = sy;
+        dragStartViewOffsetX = viewOffsetX;
+        dragStartViewOffsetY = viewOffsetY;
+        setStatus('平移视图中...');
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+
+      if (isLeftDragging && fgImg) {
+        const dxScreen = sx - dragStartX;
+        const dyScreen = sy - dragStartY;
+        const dxWorld = dxScreen / viewScale;
+        const dyWorld = dyScreen / viewScale;
+
+        if (toolMode === 'move') {
+          if (hasPerspective && dragStartQuad) {
+            for (let i = 0; i < 4; i++) {
+              fgQuad[i].x = dragStartQuad[i].x + dxWorld;
+              fgQuad[i].y = dragStartQuad[i].y + dyWorld;
+            }
+          } else {
+            fgPosX = dragStartFgPosX + dxWorld;
+            fgPosY = dragStartFgPosY + dyWorld;
+            updateFgQuadFromRect();
+          }
+          draw();
+        } else if (toolMode === 'pen' && draggingPointIndex >= 0) {
+          const world = screenToWorld(sx, sy);
+          let local = worldToFgLocal(world.x, world.y);
+          if (e.shiftKey && maskPoints.length > 1) {
+            const idx = draggingPointIndex;
+            const ref = idx > 0 ? maskPoints[idx - 1] : maskPoints[1];
+            if (ref) local = snapToAxis(ref, local);
+          }
+          maskPoints[draggingPointIndex].x = local.x;
+          maskPoints[draggingPointIndex].y = local.y;
+          draw();
+        } else if (toolMode === 'rect' && isRectDrawing && rectStartLocal) {
+          const world = screenToWorld(sx, sy);
+          let local = worldToFgLocal(world.x, world.y);
+          if (e.shiftKey) {
+            const dx = local.x - rectStartLocal.x;
+            const dy = local.y - rectStartLocal.y;
+            const size = Math.max(Math.abs(dx), Math.abs(dy));
+            local = {
+              x: rectStartLocal.x + Math.sign(dx || 1) * size,
+              y: rectStartLocal.y + Math.sign(dy || 1) * size
+            };
+          }
+          rectCurrentLocal = local;
+          draw();
+        } else if (toolMode === 'transform' && dragStartQuad) {
+          hasPerspective = true;
+          if (draggingCornerIndex >= 0) {
+            const base = dragStartQuad[draggingCornerIndex];
+            fgQuad[draggingCornerIndex] = { x: base.x + dxWorld, y: base.y + dyWorld };
+          } else {
+            for (let i = 0; i < 4; i++) {
+              fgQuad[i].x = dragStartQuad[i].x + dxWorld;
+              fgQuad[i].y = dragStartQuad[i].y + dyWorld;
+            }
+          }
+          draw();
+        }
+      }
+
+      if (isRightDragging) {
+        const dx = sx - dragStartX;
+        const dy = sy - dragStartY;
+        viewOffsetX = dragStartViewOffsetX + dx;
+        viewOffsetY = dragStartViewOffsetY + dy;
+        draw();
+      }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (e.button === 0) {
+        if (toolMode === 'rect' && isRectDrawing && rectStartLocal && rectCurrentLocal) {
+          const x1 = rectStartLocal.x;
+          const y1 = rectStartLocal.y;
+          const x2 = rectCurrentLocal.x;
+          const y2 = rectCurrentLocal.y;
+          const minX = Math.min(x1, x2);
+          const maxX = Math.max(x1, x2);
+          const minY = Math.min(y1, y2);
+          const maxY = Math.max(y1, y2);
+          if (maxX - minX > 1 && maxY - minY > 1) {
+            maskPoints = [
+              { x: minX, y: minY },
+              { x: maxX, y: minY },
+              { x: maxX, y: maxY },
+              { x: minX, y: maxY }
+            ];
+            setStatus('矩形路径已生成，请点击“应用抠图”');
+          }
+          isRectDrawing = false;
+          rectStartLocal = rectCurrentLocal = null;
+          draw();
+        }
+
+        if (fgImg) {
+          pushHistory();
+        }
+
+        isLeftDragging = false;
+        draggingPointIndex = -1;
+        draggingCornerIndex = -1;
+        dragStartQuad = null;
+
+        if (toolMode === 'move') setStatus('移动工具 (V)');
+        if (toolMode === 'pen') setStatus('钢笔抠图 (P)：Shift 可约束水平/垂直，完成后点击“应用抠图”');
+        if (toolMode === 'transform') setStatus('透视变换：拖动四角进行透视自由变形');
+        if (toolMode === 'rect') setStatus('矩形抠图 (R)：拖出矩形后点击“应用抠图”');
+      } else if (e.button === 2) {
+        isRightDragging = false;
+        setStatus('视图平移完成');
+      }
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      isLeftDragging = false;
+      isRightDragging = false;
+      draggingPointIndex = -1;
+      draggingCornerIndex = -1;
+      dragStartQuad = null;
+      if (toolMode === 'rect') {
+        isRectDrawing = false;
+        rectStartLocal = rectCurrentLocal = null;
+      }
+    });
+
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // ========= 滚轮缩放视图 =========
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+
+      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+      const before = screenToWorld(sx, sy);
+
+      viewScale *= zoomFactor;
+      viewScale = Math.min(Math.max(viewScale, 0.1), 10);
+
+      const after = screenToWorld(sx, sy);
+      viewOffsetX += (before.x - after.x) * viewScale;
+      viewOffsetY += (before.y - after.y) * viewScale;
+
+      draw();
+    }, { passive: false });
+
+    // ========= 键盘快捷键 =========
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'v' || e.key === 'V') setToolMode('move');
+      else if (e.key === 'p' || e.key === 'P') setToolMode('pen');
+      else if (e.key === 't' || e.key === 'T') setToolMode('transform');
+      else if (e.key === 'r' || e.key === 'R') setToolMode('rect');
+
+      if (fgImg && e.ctrlKey && (e.key === '=' || e.key === '+')) {
+        uniformScale(1.1);
+        e.preventDefault();
+      }
+      if (fgImg && e.ctrlKey && e.key === '-') {
+        uniformScale(0.9);
+        e.preventDefault();
+      }
+
+      // 简单增加键盘撤回（Ctrl+Z / Ctrl+Shift+Z）
+      if (e.ctrlKey && (e.key === 'z' || e.key === 'Z')) {
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+        e.preventDefault();
+      }
+    });
+
+    // ========= 导出 PNG（尺寸与底图像素完全一致） =========
+    exportBtn.addEventListener('click', () => {
+      if (!bgImg) {
+        alert('请先加载底图');
+        return;
+      }
+      const exportCanvas = document.createElement('canvas');
+      const exportCtx = exportCanvas.getContext('2d');
+      exportCanvas.width = bgImg.width;
+      exportCanvas.height = bgImg.height;
+
+      // 导出时完全按照原始像素坐标绘制，不受 viewScale 影响
+      exportCtx.drawImage(bgImg, 0, 0);
+
+      if (fgImg && fgQuad) {
+        const bgOriginX = bgImg.width / 2;
+        const bgOriginY = bgImg.height / 2;
+        const quadPixels = fgQuad.map(p => ({
+          x: bgOriginX + p.x,
+          y: bgOriginY + p.y
+        }));
+        drawWarpedImageScreen(exportCtx, fgImg, quadPixels, 0);
+      }
+
+      const url = exportCanvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'export.png';
+      a.click();
+      setStatus('导出完成（尺寸与底图一致）');
+    });
+
+    // 初始绘制
+    draw();
+  </script>
+</body>
+</html>
